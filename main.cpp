@@ -2,54 +2,87 @@
 #include <vector>
 #include <map>
 #include <ostream>
+#include <cstdint>
 
 using std::vector;
 using std::map;
 using std::ostream;
 using std::string;
+using std::pair;
 
 struct SQLType {
-   size_t size();
-   string toString(void* data);
-   void fromString(string const& val, void* data);
+   size_t size() const;
+   string toString(void* data) const;
+   void fromString(string const& val, void* data) const;
 };
 
 struct Column {
-   string name;
-   size_t offset;
-   SQLType type;
-}
+   Column(string const& name, size_t offset, SQLType const& type): m_name(name), m_offset(offset), m_type(type) { }
+   string const& name() const { return m_name; }
+   size_t offset() const { return m_offset; }
+   SQLType const& type() const { return m_type; }
+private:
+   string m_name;
+   size_t m_offset;
+   SQLType m_type;
+};
 
 // Has iterator over columns.
 struct TableMetadata {
    TableMetadata(string const& name, vector<pair<string, SQLType>> const& columns);
-   string name;  
-   vector<pair<string, SQLType>> columns;
-   vector<string> indexes;
-   size_t rowCount;
-   size_t rowSize;
+   string const& name() const { return m_name; }
+   size_t rowCount() const { return m_rowCount; }
+   size_t& rowCount() { return m_rowCount; }
+   size_t pageCount() const { return m_pageCount; }
+   size_t& pageCount() { return m_pageCount; }
+   size_t rowSize() const { return m_rowSize; }
+   // Copying vector stuff out
+   vector<Column>::const_iterator begin() const { return m_columns.begin(); }
+   vector<Column>::const_iterator end() const { return m_columns.end(); }
+   //vector<Column>::iterator begin() { return m_columns.begin(); }
+   //vector<Column>::iterator end() { return m_columns.end(); }
+   Column const& operator[](string const& name) const;
+private:
+   string m_name;  
+   size_t m_rowCount;
+   size_t m_pageCount;
+   size_t m_rowSize;
+   vector<Column> m_columns;
+   vector<string> m_indexes;
 };
 
-// TODO: For memory management turn it to singleton
+// TODO: Make it a proper singleton
 struct Metadata {
+   static void create(string const& filename);
+   static void destroy();
+   static Metadata& instance() { return *m_instance; }
+   size_t pageSize() const { return m_pageSize; }
+   vector<TableMetadata>::iterator begin() { return m_tables.begin(); }
+   vector<TableMetadata>::const_iterator begin() const { return m_tables.begin(); }
+   vector<TableMetadata>::iterator end() { return m_tables.end(); }
+   vector<TableMetadata>::const_iterator end() const { return m_tables.end(); }
+   vector<TableMetadata>::iterator find(string const& name);
+   vector<TableMetadata>::const_iterator find(string const& name) const;
+   void insert(TableMetadata const&);
+   void flush();
+private:
    Metadata(string const& filename);
-   saveToDisk();
-
-   vector<TableMetadata> tables;
+   static Metadata* m_instance;
+   vector<TableMetadata> m_tables;
+   string m_filename;
+   size_t m_pageSize;
 };
 
-// TODO: Make it a singleton as well
+// TODO: Make it a proper singleton
 struct PageManager {
+   static PageManager& instance() { return *m_instance; }
+   uint8_t* getPage(string const& name, size_t number);
+   uint8_t* createPage(string const& name, size_t number);
+   void flushPage(string const& name, size_t number);
+private:
    PageManager(string const& directory, size_t pageCount);
-   void* getPage(string const& name, size_t number);
-   void* createPage(string const& name, size_t number);
-
+   static PageManager* m_instance;
 };
-
-// Pointer is to emulate optional value
-TableMetadata* findTable(const string& name) {
-
-}
 
 // Trusts that columns exist in a table
 void printTableHeader(ostream& out, TableMetadata const& table, vector<string> const& columns = vector<string>()) {
@@ -67,10 +100,12 @@ void printTableHeader(ostream& out, TableMetadata const& table, vector<string> c
 }
 
 // Trusts that columns exist in a table
-void printTableRow(ostream& out, TableMetadata const& table, size_t row, vector<string> const& columns = vector<string()) {
-   size_t pageNum = row / table->rowsPerPage();
-   void* data = (PageManager::instance()).getPage(name, pageNum);
-   size_t pageOffset = (row - pageNum * table->rowsPerPage()) * table->rowSize();
+void printTableRow(ostream& out, TableMetadata const& table, size_t row, vector<string> const& columns = vector<string>()) {
+   Metadata metadata = Metadata::instance();
+   size_t rowsPerPage = metadata.pageSize() / table.rowSize();
+   size_t pageNum = row / rowsPerPage;
+   uint8_t* data = (PageManager::instance()).getPage(table.name(), pageNum);
+   size_t pageOffset = (row - pageNum * rowsPerPage) * table.rowSize();
    data += pageOffset;
    if(columns.empty()) {
       auto col = table.begin();
@@ -79,10 +114,10 @@ void printTableRow(ostream& out, TableMetadata const& table, size_t row, vector<
          out << ", " << col->type().toString(data + col->offset());
    } else {
       auto colName = columns.begin();
-      Column& col = table[*colName];
+      Column const& col = table[*colName];
       out << col.type().toString(data + col.offset());
       for(++colName; colName != columns.end(); ++colName) {
-         Column& col = table[*colName];
+         Column const& col = table[*colName];
          out << ", " << col.type().toString(data + col.offset());
       }
    }
@@ -90,7 +125,6 @@ void printTableRow(ostream& out, TableMetadata const& table, size_t row, vector<
 
 int selectAll(string const& name, ostream& out) {
    Metadata metadata = Metadata::instance();
-   PageManager pageManager = PageManager::instance();
    auto table = metadata.find(name);
    if(table == metadata.end())
       return 1;
@@ -116,21 +150,22 @@ int insertInto(string const& name, map<string, string> const& values) {
       return 1;
    size_t rowNum = table->rowCount();
    table->rowCount() += 1;
-   size_t pageNum = rowNum / table->rowsPerPage();
-   void* data;
+   size_t rowsPerPage = metadata.pageSize() / table->rowSize();
+   size_t pageNum = rowNum / rowsPerPage;
+   uint8_t* data;
    if(pageNum >= table->pageCount()) {
       data = pageManager.createPage(name, pageNum); 
       table->pageCount() += 1;
    } else
       data = pageManager.getPage(name, pageNum);
-   size_t pageOffset = (rowNum - pageNum * table->rowsPerPage()) * table->rowSize();
+   size_t pageOffset = (rowNum - pageNum * rowsPerPage) * table->rowSize();
    data += pageOffset;
-   for(auto col: table) {
-      auto val = values.find(col->name());
+   for(auto col: *table) {
+      auto val = values.find(col.name());
       string valStr = "";
-      if(val != map::end())
+      if(val != values.end())
          valStr = val->second;
-      col->type().fromString(valStr, data + col->offset());
+      col.type().fromString(valStr, data + col.offset());
    }
    pageManager.flushPage(name, pageNum);
    metadata.flush();
