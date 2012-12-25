@@ -6,20 +6,19 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <ostream>
 
 using std::string;
 using std::vector;
 using std::map;
 using std::pair;
+using std::ostream;
 
-int selectAll(ostream&, string const& tablename);
+int selectAll(std::ostream&, string const&, vector<string> const& cols = vector<string>());
 
-inline void createTable(string const& name, vector<pair<string, SqlType*>> const& columns) {
-   Metadata::instance().insert(Table(name, columns));
+inline void createTable(string const& name, vector<pair<string, SqlType*>> const& cols) {
+   Metadata::instance().insert(Table(name, cols));
    Metadata::instance().flush();
 }
 
 int insertInto(string const& name, map<string, string> const& values);
-
-int checkForColumns(string const& name, vector<string> const& columns);
-int checkForColumns(string const& name, vector<pair<string, SqlType*>> const& columns);

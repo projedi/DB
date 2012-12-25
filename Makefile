@@ -1,7 +1,7 @@
 CXXFLAGS = -g -Wall -pedantic -std=c++11 -ferror-limit=50
 CXX = clang++
 
-sources = pagemanager.cpp metadata.cpp insert.cpp
+sources = pagemanager.cpp metadata.cpp insert.cpp select.cpp
 headers = pagemanager.h types.h metadata.h cmdlist.h
 objects = ${sources:.cpp=.o}
 
