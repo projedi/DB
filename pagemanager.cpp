@@ -97,7 +97,6 @@ void PageManager::loadPage(Page& page) {
    fstream file(filename, fstream::in | fstream::binary);  
    file.seekg(shift);
    file.read((char*)buffer, m_pageSize);
-   file.close();
 }
 
 void PageManager::savePage(Page const& page) {
@@ -106,7 +105,8 @@ void PageManager::savePage(Page const& page) {
    string filename = m_directory + "/" + page.m_name;
    size_t shift = page.m_number * m_pageSize;
    fstream file(filename, fstream::in | fstream::out | fstream::binary);  
+   if(!file.is_open())
+      file.open(filename, fstream::out | fstream::binary);
    file.seekp(shift);
    file.write((char*)buffer, m_pageSize);
-   file.close();
 }

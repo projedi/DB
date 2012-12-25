@@ -27,6 +27,10 @@ struct SqlTypeGeneric: SqlType {
    }
    void fromString(string const& val, Page page, size_t offset) const {
       T* data = (T*) (page + offset);
+      if(val == "") {
+         *data = T();
+         return;
+      }
       std::stringstream str(val);
       str >> *data;
    }
@@ -42,8 +46,12 @@ struct SqlTypeGeneric<string>: SqlType {
    }
    void fromString(string const& val, Page page, size_t offset) const {
       char* data = (char*) (page + offset);
-      for(int i = 0; i != m_size; ++i)
-         data[i] = val[i];
+      for(int i = 0; i != m_size; ++i) {
+         if(i < val.size())
+            data[i] = val[i];
+         else
+            data[i] = 0;
+      }
    }
 protected:
    size_t m_size;
