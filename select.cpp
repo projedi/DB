@@ -1,50 +1,70 @@
 #include "cmdlist.h"
-#include "metadata.h"
 
 using std::ostream;
 using std::endl;
+using std::vector;
+using std::string;
 
-typedef vector<Column>::const_iterator coliter;
-
-void printHeader(ostream& ost, Table const& table, vector<coliter> const& cols) {
+void printHeader(ostream& ost, Table const& table, vector<Column> const& cols) {
    auto col = cols.begin();
-   ost << (*col)->name();
+   ost << col->name();
    for(++col; col != cols.end(); ++col)
-      ost << ", " << (*col)->name();
+      ost << ", " << col->name();
 }
 
-void printRow(ostream& ost, Table const& table, size_t row, vector<coliter> const& cols) {
-   size_t rowsPerPage = Metadata::instance().pageSize() / table.rowSize();
-   size_t pageNum = row / rowsPerPage;
-   Page page("table-" + table.name(), pageNum);
-   size_t pageOffset = (row - pageNum * rowsPerPage) * table.rowSize();
-   auto col = cols.begin();
-   ost << (*col)->type()->toString(page, pageOffset + (*col)->offset());
-   for(++col; col != cols.end(); ++col)
-      ost << ", " << (*col)->type()->toString(page, pageOffset + (*col)->offset());
-}
-
-int selectAll(ostream& ost, string const& name, vector<string> const& columns) {
-   auto table = Metadata::instance().find(name);
-   if(table == Metadata::instance().end())
-      return 1;
-   vector<coliter> cols;
-   if(columns.empty()) {
-      for(auto col = table->begin(); col != table->end(); ++col)
-         cols.push_back(col);
+Page* getPage(Database const& db, Table const& table, size_t row, size_t& pageOffset) {
+   Page* page;
+   // Let's not forget dirty byte.
+   size_t rowSize = 1 + table.rowSize();
+   size_t pageSize = db.metadata().pageSize;
+   size_t rowsOnFirstPage = (pageSize - table.headerSize()) / rowSize;
+   size_t rowsOnPage = pageSize / rowSize;
+   if(row < rowsOnFirstPage) {
+      page = new Page(table.page());
+      pageOffset = table.headerSize() + row * rowSize;
    } else {
-      for(auto col: columns) {
-         auto it = table->findCol(col);
-         // TODO: Report which column not found
-         if(it == table->end())
-            return 1;
-         cols.push_back(it);
+      // It's like numbering pages from 1.
+      row -= rowsOnFirstPage;
+      size_t pageNum = row / rowsOnPage + 1;
+      page = new Page(db, table.page().name(), pageNum);
+      pageOffset = (row - (pageNum - 1) * rowsOnPage) * rowSize;
+   }
+   return page;
+}
+
+void printRow(Database const& db, ostream& ost, Table const& table, size_t row,
+      vector<Column> const& cols) {
+   size_t pageOffset;
+   Page* page = getPage(db, table, row, pageOffset);
+   uint8_t res = page->at<uint8_t>(pageOffset);
+   if(res != 0xaa) { delete page; return; }
+   auto col = cols.begin();
+   size_t offset = pageOffset + col->offset();
+   col->toString(ost, *page, offset);
+   for(++col; col != cols.end(); ++col) {
+      offset = pageOffset + col->offset();
+      ost << ", ";
+      col->toString(ost, *page, offset);
+   }
+   delete page;
+}
+
+int selectAll(Database const& db, ostream& ost, Table const& table,
+      vector<string> const& columns) {
+   vector<Column> cols;
+   if(columns.empty()) {
+      for(auto col = table.begin(); col != table.end(); ++col)
+         cols.push_back(*col);
+   } else {
+      for(auto col = columns.begin(); col != columns.end(); ++col) {
+         auto it = table.find(*col);
+         if(it) cols.push_back(*it);
       }
    }
-   printHeader(ost, *table, cols);
-   for(size_t row = 0; row != table->rowCount(); ++row) {
+   printHeader(ost, table, cols);
+   for(size_t row = 0; row != table.rowCount(); ++row) {
       ost << endl;
-      printRow(ost, *table, row, cols);
+      printRow(db, ost, table, row, cols);
    }
    return 0;
 }

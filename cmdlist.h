@@ -1,24 +1,23 @@
 #pragma once
 
-#include "types.h"
-#include "metadata.h"
+#include "table.h"
 
 #include <string>
 #include <map>
 #include <vector>
 #include <ostream>
 
-using std::string;
-using std::vector;
-using std::map;
-using std::pair;
-using std::ostream;
+Page* getPage(Database const&, Table const&, size_t row, size_t& pageOffset);
 
-int selectAll(std::ostream&, string const&, vector<string> const& cols = vector<string>());
+// Does not check if such columns exist
+int selectAll(Database const&, std::ostream&, Table const&,
+      std::vector<std::string> const& cols = std::vector<std::string>());
 
-inline void createTable(string const& name, vector<pair<string, SqlType*>> const& cols) {
-   Metadata::instance().insert(Table(name, cols));
-   Metadata::instance().flush();
-}
+// From table.h:
+// typedef std::pair<std::string, SqlType*> InputColumn;
+inline void createTable(Database const&, std::string const&, std::vector<InputColumn> const&);
 
-int insertInto(string const& name, map<string, string> const& values);
+// Doesn't check if such columns exist or if it typechecks
+void insertInto(Database const&, Table&, std::map<std::string, std::string> const&);
+
+#include "cmdlist_impl.h"

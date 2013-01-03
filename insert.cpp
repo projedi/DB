@@ -1,26 +1,22 @@
 #include "cmdlist.h"
-#include "metadata.h"
-#include "pagemanager.h"
 
 using std::string;
+using std::map;
+using std::stringstream;
 
-int insertInto(string const& name, map<string, string> const& values) {
-   auto table = Metadata::instance().find(name);
-   if(table == Metadata::instance().end())
-      return 1;
-   size_t rowNum = table->rowCount();
-   table->rowCount() += 1;
-   size_t rowsPerPage = Metadata::instance().pageSize() / table->rowSize();
-   size_t pageNum = rowNum / rowsPerPage;
-   Page page("table-" + name, pageNum);
-   size_t pageOffset = (rowNum - pageNum * rowsPerPage) * table->rowSize();
-   for(auto col: *table) {
-      auto val = values.find(col.name());
-      string valStr = "";
-      if(val != values.end())
-         valStr = val->second;
-      col.type()->fromString(valStr, page, pageOffset + col.offset());
+void insertInto(Database const& db, Table& table,
+      map<string, string> const& values) {
+   size_t rowNum = table.rowCount();
+   table.rowCount() += 1;
+   size_t pageOffset;
+   Page* page = getPage(db, table, rowNum, pageOffset);
+   page->at<uint8_t>(pageOffset, 0xaa);
+   stringstream str;
+   for(auto col = table.begin(); col != table.end(); ++col) {
+      auto val = values.find(col->name());
+      str << val->second << '\n';
+      col->fromString(str, *page, pageOffset);
    }
-   Metadata::instance().flush();
-   return 0;
+   delete page;
+   table.saveHeader();
 }
