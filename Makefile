@@ -1,16 +1,15 @@
 LIBS = -lboost_filesystem -lboost_system
-CPPFLAGS = -g -Wall -pedantic -std=c++11 -O2
-#CPPFLAGS = -Wall -pedantic -std=c++11 -O2 -g -pg
+#CPPFLAGS = -Wall -pedantic -std=c++11 -g
+CPPFLAGS = -Wall -pedantic -std=c++11 -O2 -g -pg
+#CPPFLAGS = -Wall -pedantic -std=c++11 -O2
 #CXX = clang++
 CXX = g++
 LD = ${CXX}
-LDFLAGS = 
-#LDFLAGS = -pg
+#LDFLAGS = 
+LDFLAGS = -pg
 BUILDDIR = build
 
-sources = database.cpp types.cpp table.cpp page.cpp file.cpp insert.cpp select.cpp main.cpp
-#headers = page.h page_impl.h file.h file_impl.h \
-#			 database.h database_impl.h cache.h cache_impl.h
+sources = database.cpp types.cpp page.cpp file.cpp insert.cpp select.cpp main.cpp
 objects = ${sources:%.cpp=$(BUILDDIR)/%.o}
 depends = ${sources:%.cpp=$(BUILDDIR)/%.d}
 

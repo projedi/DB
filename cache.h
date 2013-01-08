@@ -17,12 +17,14 @@ struct Cacheable {
    bool operator >=(T const&) const;
 };
 
+typedef uint64_t cachesize_t;
+
 template<class T>
 struct Cache {
    // Cool, isn't? Emulating Haskell-like parametric polymorphism with constraints
    static_assert(std::is_base_of<Cacheable<T>, T>::value,
          "T must be derived from Cacheable<T>");
-   Cache(size_t maxSize);
+   Cache(cachesize_t maxSize);
    ~Cache();
    boost::optional<T> find(T const&);
    void insert(T const&);
@@ -31,7 +33,7 @@ private:
    Cache(Cache<T> const&);
    Cache<T>& operator =(Cache<T> const&);
 private:
-   size_t m_maxSize;
+   cachesize_t m_maxSize;
    std::map<T, typename std::list<T>::iterator> m_map;
    std::list<T> m_list;
 };

@@ -8,7 +8,7 @@ template<class T>
 bool Cacheable<T>::operator >=(T const& o) const { return !(*this < o); }
 
 template<class T>
-Cache<T>::Cache(size_t maxSize): m_maxSize(maxSize) { }
+Cache<T>::Cache(cachesize_t maxSize): m_maxSize(maxSize) { }
 
 template<class T>
 Cache<T>::~Cache() {

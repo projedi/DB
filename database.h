@@ -3,33 +3,29 @@
 #include <string>
 #include <cstdint>
 
+#include "file.h"
+
 struct Metadata {
    std::string path;
-   // TODO: What types are better suited here?
-   uint64_t maxPagesCount;
-   uint64_t maxFilesCount;
-   uint64_t pageSize;
+   cachesize_t maxPagesCount;
+   cachesize_t maxFilesCount;
+   pagesize_t pageSize;
 };
-
-template<class T> struct Cache;
-struct File;
-struct Page;
 
 struct Database {
    // Throws an exception if path is not a directory.
    Database(Metadata const&, bool overwrite = false);
-   ~Database();
    inline Metadata const& metadata() const;
-   inline Cache<File>& filesCache() const;
-   inline Cache<Page>& pagesCache() const;
+   inline Cache<File>& filesCache();
+   inline Cache<Page>& pagesCache();
 private:
    Database(Database const&);
    Database& operator =(Database const&);
 private:
    Metadata m_meta;
    // Pointers are just to allow incomplete types
-   Cache<File>* m_filesCache;
-   Cache<Page>* m_pagesCache;
+   Cache<File> m_filesCache;
+   Cache<Page> m_pagesCache;
 };
 
 #include "database_impl.h"

@@ -4,11 +4,11 @@ using std::string;
 using std::map;
 using std::stringstream;
 
-void insertInto(Database const& db, Table& table,
-      map<string, string> const& values) {
-   size_t rowNum = table.rowCount();
+// TODO: Has high self time. Investigate further
+void insertInto(Database& db, Table& table, map<string, string> const& values) {
+   rowcount_t rowNum = table.rowCount();
    table.rowCount() += 1;
-   size_t pageOffset;
+   pagesize_t pageOffset;
    Page* page = getPage(db, table, rowNum, pageOffset);
    page->at<uint8_t>(pageOffset, 0xaa);
    stringstream str;
@@ -18,5 +18,4 @@ void insertInto(Database const& db, Table& table,
       col->fromString(str, *page, pageOffset);
    }
    delete page;
-   table.saveHeader();
 }

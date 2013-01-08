@@ -2,15 +2,13 @@
 #include <fstream>
 
 #include "database.h"
-#include "file.h"
-#include "page.h"
 
 using namespace boost::filesystem;
 using std::fstream;
 using std::string;
 
 // TODO: Overwrite should really clean everything up in a directory
-void synchroniseDB(string const& dirPath, bool overwrite, uint64_t& pageSize) {
+void synchroniseDB(string const& dirPath, bool overwrite, pagesize_t& pageSize) {
    fstream fs;
    path dir(dirPath);
    path dbFile = dir;
@@ -37,14 +35,7 @@ void synchroniseDB(string const& dirPath, bool overwrite, uint64_t& pageSize) {
    fs << pageSize;
 }
 
-Database::Database(Metadata const& meta, bool overwrite): m_meta(meta) {
-   m_filesCache = new Cache<File>(meta.maxFilesCount);
-   m_pagesCache = new Cache<Page>(meta.maxPagesCount);
+Database::Database(Metadata const& meta, bool overwrite):
+   m_meta(meta), m_filesCache(meta.maxFilesCount), m_pagesCache(meta.maxPagesCount) {
    synchroniseDB(m_meta.path, overwrite, m_meta.pageSize);
-}
-
-Database::~Database() {
-   // Fun fact: it was in a different order previously; took me 3 hours.
-   delete m_pagesCache;
-   delete m_filesCache;
 }

@@ -1,10 +1,3 @@
-// TODO: Enforce dirty bit to table list because it's broken now.
-// Table list: dirty , record size(with dirty), name length, name, column count,
-//             column name length, column name, column type code, ...,
-//             indexes count, index of indexed column, index type code,
-//             extra index data length, extra index data
-// Table: dirty, data, dirty, data, ...
-// Dirty shows if entry is deleted.
 #include <string>
 #include <cstdint>
 #include <iostream>
@@ -18,7 +11,13 @@ using namespace std;
 #include "table.h"
 #include "cmdlist.h"
 
-void testPages(Database const& db) {
+//TODO: Implement all stuff without indexes:
+// 1. SELECT WHERE a = b, a < b, ...
+// 2. UPDATE a = b where c < d, ...
+// 3. DELETE where e > f
+// Only then add HASH and try to bake it in
+
+void testPages(Database& db) {
    string name = "page";
    Page** p = new Page*[8];
    for(int i = 0; i != 8; ++i) p[i] = nullptr;
@@ -35,7 +34,7 @@ void testPages(Database const& db) {
    delete [] p;
 }
 
-void testMeta(Database const& db) {
+void testMeta(Database& db) {
    auto res = Table::findTable(db, "table1");
    if(res) { cout << "Table found" << endl; return; }
    cout << "Table not found" << endl;
@@ -46,7 +45,7 @@ void testMeta(Database const& db) {
    if(res) cout << "Table found" << endl;
 }
 
-void testDB(Database const& db) {
+void testDB(Database& db) {
    auto res = Table::findTable(db, "table1");
    if(!res) { cout << "Table not found" << endl; return; }
    map<string, string> vals;
@@ -59,8 +58,6 @@ void testDB(Database const& db) {
 }
 
 int main() {
-   // Valgrind freaks out
-   //Metadata meta = { "test", 3, 5, 100 };
    Metadata meta = { "test", 3, 5, 4096 };
    Database db(meta, true);
    //testPages(db);
