@@ -14,6 +14,7 @@ struct Column {
    inline std::string const& name() const;
    inline pagesize_t offset() const;
    inline pagesize_t& offset();
+   inline SqlType const& type() const;
    inline pagesize_t size() const;
    inline pagesize_t sizeHeader() const;
    friend void Page::at<Column>(pagesize_t& offset, Column const&);

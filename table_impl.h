@@ -5,6 +5,7 @@ std::string const& Column::name() const { return m_name; }
 pagesize_t Column::offset() const { return m_offset; }
 pagesize_t& Column::offset() { return m_offset; }
 pagesize_t Column::size() const { return m_type->size(); }
+SqlType const& Column::type() const { return *m_type; }
 pagesize_t Column::sizeHeader() const { return 1 + m_name.size() + 2 + 1 + 8; }
 
 template<>
