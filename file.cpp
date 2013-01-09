@@ -22,7 +22,7 @@ uint8_t* File::loadPage(pagenumber_t number) {
    long needLen = (number + 1) * pageSize;
    fseek(file, 0, SEEK_END);
    long fileLen = ftell(file);
-   if(needLen < fileLen) {
+   if(needLen <= fileLen) {
       fseek(file, number * pageSize, SEEK_SET);
       fread(buffer, pageSize, 1, file);
    } else

@@ -61,7 +61,7 @@ inline std::string Page::at<std::string>(pagesize_t& offset) const {
    }
    data += offset;
    uint8_t size = *data;
-   std::string res((char*)(data + 1), size);
+   std::string res((char const*)(data + 1), size);
    offset += 1 + size;
    return res;
 }

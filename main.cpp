@@ -1,15 +1,8 @@
-#include <string>
-#include <cstdint>
 #include <iostream>
-#include <sstream>
-#include <cstring>
+
+#include "cmdlist.h"
 
 using namespace std;
-
-#include "database.h"
-#include "page.h"
-#include "table.h"
-#include "cmdlist.h"
 
 //TODO: Implement all stuff without indexes:
 // 1. SELECT WHERE a = b, a < b, ...
@@ -22,7 +15,7 @@ void testPages(Database& db) {
    Page** p = new Page*[8];
    for(int i = 0; i != 8; ++i) p[i] = nullptr;
    for(int i = 0; i != 1000000; ++i) {
-      uint64_t j = i % 8;
+      pagesize_t j = i % 8;
       if(p[j]) delete p[j];
       p[j] = new Page(db, name, i);
       char c = 'x';

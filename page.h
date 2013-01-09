@@ -7,8 +7,7 @@
 struct Database;
 
 typedef uint64_t pagenumber_t;
-// TODO: change to uint32_t
-typedef uint64_t pagesize_t;
+typedef uint32_t pagesize_t;
 
 struct Page: Cacheable<Page> {
    Page(Database&, std::string const&, pagenumber_t);

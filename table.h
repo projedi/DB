@@ -21,7 +21,7 @@ struct Column {
    inline void fromString(std::istream&, Page&, pagesize_t& offset) const;
    inline void toString(std::ostream&, Page const&, pagesize_t& offset) const;
 private:
-   std::shared_ptr<SqlType const*> m_type;
+   std::shared_ptr<SqlType const> m_type;
    std::string m_name;
    pagesize_t m_offset;
 };

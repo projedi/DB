@@ -1,16 +1,16 @@
 Column::Column(std::string const& name, pagesize_t offset, SqlType const* type):
-   m_type(new SqlType const*(type)), m_name(name), m_offset(offset) { }
+   m_type(type), m_name(name), m_offset(offset) { }
 
 std::string const& Column::name() const { return m_name; }
 pagesize_t Column::offset() const { return m_offset; }
 pagesize_t& Column::offset() { return m_offset; }
-pagesize_t Column::size() const { return (*m_type)->size(); }
+pagesize_t Column::size() const { return m_type->size(); }
 pagesize_t Column::sizeHeader() const { return 1 + m_name.size() + 2 + 1 + 8; }
 
 template<>
 inline void Page::at<Column>(pagesize_t& offset, Column const& val) {
    at<std::string>(offset, val.m_name);
-   at<typeid_t>(offset, (*val.m_type)->id());
+   at<typeid_t>(offset, val.m_type->id());
    at<uint8_t>(offset, 0); // TODO: index type
    at<uint64_t>(offset, 0); // TODO: index extra data
 }
@@ -29,11 +29,11 @@ inline Column Page::at<Column>(pagesize_t& offset) const {
 }
 
 void Column::fromString(std::istream& ist, Page& page, pagesize_t& offset) const {
-   (*m_type)->fromString(ist, page, offset);
+   m_type->fromString(ist, page, offset);
 }
 
 void Column::toString(std::ostream& ost, Page const& page, pagesize_t& offset) const {
-   (*m_type)->toString(ost, page, offset);
+   m_type->toString(ost, page, offset);
 }
 
 Table::Table(Database& db, std::string const& name, std::vector<InputColumn> const& cols):
