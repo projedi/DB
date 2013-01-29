@@ -14,7 +14,8 @@ void VarcharType::fromString(std::istream& ist, Page& page, pagesize_t& offset) 
 void VarcharType::toString(std::ostream& ost, Page const& page, pagesize_t& offset) const {
    ost << '"';
    for(typesize_t i = 0; i != m_size; ++i) {
-      ost << page.at<char>(offset);
+      char c = page.at<char>(offset);
+      if(c) ost << c;
    }
    ost << '"';
 }

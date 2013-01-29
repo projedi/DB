@@ -4,6 +4,9 @@ using std::ostream;
 using std::endl;
 using std::vector;
 using std::string;
+using std::pair;
+using std::map;
+using std::unique_ptr;
 
 void printHeader(ostream& ost, Table const& table, vector<Column> const& cols) {
    auto col = cols.begin();
@@ -49,9 +52,7 @@ void printRow(Database& db, ostream& ost, Table const& table, rowcount_t row,
    delete page;
 }
 
-void selectAll(Database& db, ostream& ost, Table const& table,
-      vector<string> const& columns) {
-   vector<Column> cols;
+void formColumns(Table const& table, vector<string> const& columns, vector<Column>& cols) {
    if(columns.empty()) {
       for(auto col = table.begin(); col != table.end(); ++col)
          cols.push_back(*col);
@@ -61,9 +62,52 @@ void selectAll(Database& db, ostream& ost, Table const& table,
          if(it) cols.push_back(*it);
       }
    }
+}
+
+void selectAll(Database& db, ostream& ost, Table const& table,
+      vector<string> const& columns) {
+   vector<Column> cols;
+   formColumns(table, columns, cols);
    printHeader(ost, table, cols);
    for(rowcount_t row = 0; row != table.rowCount(); ++row) {
       ost << endl;
       printRow(db, ost, table, row, cols);
+   }
+}
+
+bool checkRow(Database& db, Table const& table, rowcount_t row,
+      vector<pair<Column,vector<Predicate>>> const& constrs) {
+   pagesize_t pageOffset;
+   unique_ptr<Page> page(getPage(db, table, row, pageOffset));
+   uint8_t res = page->at<uint8_t>(pageOffset);
+   if(res != 0xaa) { return false; }
+   pagesize_t offset = pageOffset;
+   for(auto it = constrs.begin(); it != constrs.end(); ++it) {
+      pageOffset = offset + it->first.offset();
+      if(!it->first.type().satisfies(it->second, *page, pageOffset)) return false;
+   }
+   return true;
+}
+
+void formConstrs(Table const& table, map<string,vector<Predicate>> const& constrs,
+      vector<pair<Column,vector<Predicate>>>& newConstrs) {
+   for(auto it = constrs.begin(); it != constrs.end(); ++it) {
+      auto col = table.find(it->first);
+      if(col) newConstrs.push_back(make_pair(*col, it->second));
+   }
+}
+
+void selectWhere(Database& db, ostream& ost, Table const& table,
+     map<string,vector<Predicate>> const& constrs, vector<string> const& columns) {
+   vector<Column> cols;
+   formColumns(table, columns, cols);
+   printHeader(ost, table, cols);
+   vector<pair<Column,vector<Predicate>>> newConstrs; 
+   formConstrs(table, constrs, newConstrs);
+   for(rowcount_t row = 0; row != table.rowCount(); ++row) {
+      if(checkRow(db, table, row, newConstrs)) {
+         ost << endl;
+         printRow(db, ost, table, row, cols);
+      }
    }
 }
