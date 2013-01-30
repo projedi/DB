@@ -17,11 +17,11 @@ void selectWhere(Database&, std::ostream&, Table const&,
 inline void createTable(Database&, std::string const&, std::vector<InputColumn> const&);
 
 // Doesn't check if such columns exist or if it typechecks
-void insertInto(Database&, Table&, std::map<std::string, std::string> const&);
+void insertInto(Database&, Table&, std::map<std::string, void*> const&);
 
 void updateWhere(Database&, Table&,
       std::map<std::string, std::vector<Predicate>> const&,
-      std::map<std::string, std::string> const&);
+      std::map<std::string, void*> const&);
 
 void deleteWhere(Database&, Table&,
       std::map<std::string, std::vector<Predicate>> const&);

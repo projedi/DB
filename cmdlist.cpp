@@ -118,27 +118,24 @@ void selectWhere(Database& db, ostream& ost, Table const& table,
 }
 
 // TODO: Has high self time. Investigate further
-void insertInto(Database& db, Table& table, map<string, string> const& values) {
+void insertInto(Database& db, Table& table, map<string, void*> const& values) {
    rowcount_t rowNum = table.rowCount();
    table.rowCount() += 1;
    pagesize_t pageOffset;
    Page* page = getPage(db, table, rowNum, pageOffset);
    // 0xaa stands for added
    page->at<uint8_t>(pageOffset, 0xaa);
-   stringstream str;
    for(auto col = table.begin(); col != table.end(); ++col) {
       auto val = values.find(col->name());
-      str << val->second << '\n';
-      col->fromString(str, *page, pageOffset);
+      col->write(val->second, *page, pageOffset);
    }
    delete page;
 }
 
 void updateWhere(Database& db, Table& table, map<string, vector<Predicate>> const& constrs,
-      map<string, string> const& values) {
+      map<string, void*> const& values) {
    vector<pair<Column,vector<Predicate>>> newConstrs;
    formConstrs(table, constrs, newConstrs);
-   stringstream str;
    pagesize_t pageOffset;
    for(rowcount_t row = 0; row != table.rowCount(); ++row) {
       Page* page =  getPage(db, table, row, pageOffset);
@@ -147,8 +144,7 @@ void updateWhere(Database& db, Table& table, map<string, vector<Predicate>> cons
             auto val = values.find(col->name());
             if(val != values.end()) {
                pagesize_t offset = pageOffset + 1 + col->offset();
-               str << val->second << '\n';
-               col->fromString(str, *page, offset);
+               col->write(val->second, *page, offset);
             }
          }
       }

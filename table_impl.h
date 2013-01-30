@@ -29,8 +29,8 @@ inline Column Page::at<Column>(pagesize_t& offset) const {
    return res;
 }
 
-void Column::fromString(std::istream& ist, Page& page, pagesize_t& offset) const {
-   m_type->fromString(ist, page, offset);
+void Column::write(void* val, Page& page, pagesize_t& offset) const {
+   m_type->write(val, page, offset);
 }
 
 void Column::toString(std::ostream& ost, Page const& page, pagesize_t& offset) const {

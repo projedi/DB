@@ -5,12 +5,6 @@
 
 using namespace std;
 
-//TODO: Implement all stuff without indexes:
-// 1. SELECT WHERE a = b, a < b, ...
-// 2. UPDATE a = b where c < d, ...
-// 3. DELETE where e > f
-// Only then add HASH and try to bake it in
-
 void testPages(Database& db) {
    string name = "page";
    Page** p = new Page*[8];
@@ -39,29 +33,17 @@ void testMeta(Database& db) {
    if(res) cout << "Table found" << endl;
 }
 
-void testDB(Database& db) {
-   auto res = Table::findTable(db, "table1");
-   if(!res) { cout << "Table not found" << endl; return; }
-   map<string, string> vals;
-   vals["col1"] = "123";
-   vals["col2"] = "qewrty";
-   for(int i = 0; i != 500000; ++i) {
-      insertInto(db, *res, vals);
-   }
-   selectAll(db, cout, *res);
-}
-
 void insertToDB(Database& db) {
    auto res = Table::findTable(db, "table1");
-   map<string, string> vals;
+   map<string, void*> vals;
    for(int j = 0; j != 100000; ++j) {
+   //for(int j = 0; j != 10; ++j) {
       for(int i = 0; i != 12; ++i) {
-         stringstream str;
-         str << i;
-         //cout << "putting " << str.str() << endl;
-         vals["col1"] = str.str();
-         if(i % 3) vals["col2"] = "def";
-         else vals["col2"] = "abc";
+         vals["col1"] = &i;
+         string val;
+         if(i % 3) val = "def";
+         else val = "abc";
+         vals["col2"] = (void*)val.c_str();
          insertInto(db, *res, vals);
       }
    }
@@ -81,10 +63,10 @@ void testWhere(Database& db) {
    string val3 = "abc";
    map<string,vector<Predicate>> constrs;
    auto& col1 = constrs["col1"];
-   col1.push_back(Predicate(Predicate::LT, (uint8_t*)&val1));
-   col1.push_back(Predicate(Predicate::GEQ, (uint8_t*)&val2));
+   col1.push_back(Predicate(Predicate::LT, &val1));
+   col1.push_back(Predicate(Predicate::GEQ, &val2));
    auto& col2 = constrs["col2"];
-   col2.push_back(Predicate(Predicate::EQ, (uint8_t*)val3.c_str()));
+   col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
    auto res = Table::findTable(db, "table1");
    //selectWhere(db, cout, *res, constrs);
    selectAll(db, cout, *res);
@@ -96,10 +78,10 @@ void testDelete(Database& db) {
    string val3 = "abc";
    map<string,vector<Predicate>> constrs;
    auto& col1 = constrs["col1"];
-   col1.push_back(Predicate(Predicate::LT, (uint8_t*)&val1));
-   col1.push_back(Predicate(Predicate::GEQ, (uint8_t*)&val2));
+   col1.push_back(Predicate(Predicate::LT, &val1));
+   col1.push_back(Predicate(Predicate::GEQ, &val2));
    auto& col2 = constrs["col2"];
-   col2.push_back(Predicate(Predicate::EQ, (uint8_t*)val3.c_str()));
+   col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
    auto res = Table::findTable(db, "table1");
    deleteWhere(db, *res, constrs);
 }
@@ -110,12 +92,13 @@ void testUpdate(Database& db) {
    string val3 = "abc";
    map<string,vector<Predicate>> constrs;
    auto& col1 = constrs["col1"];
-   col1.push_back(Predicate(Predicate::LT, (uint8_t*)&val1));
-   col1.push_back(Predicate(Predicate::GEQ, (uint8_t*)&val2));
+   col1.push_back(Predicate(Predicate::LT, &val1));
+   col1.push_back(Predicate(Predicate::GEQ, &val2));
    auto& col2 = constrs["col2"];
-   col2.push_back(Predicate(Predicate::EQ, (uint8_t*)val3.c_str()));
-   map<string, string> vals;
-   vals["col2"] = "ae";
+   col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
+   map<string, void*> vals;
+   string val4 = "ae";
+   vals["col2"] = (void*)val4.c_str();
    auto res = Table::findTable(db, "table1");
    updateWhere(db, *res, constrs, vals);
 }

@@ -19,7 +19,7 @@ struct Column {
    inline pagesize_t sizeHeader() const;
    friend void Page::at<Column>(pagesize_t& offset, Column const&);
    friend Column Page::at<Column>(pagesize_t& offset) const;
-   inline void fromString(std::istream&, Page&, pagesize_t& offset) const;
+   inline void write(void*, Page&, pagesize_t& offset) const;
    inline void toString(std::ostream&, Page const&, pagesize_t& offset) const;
 private:
    std::shared_ptr<SqlType const> m_type;
