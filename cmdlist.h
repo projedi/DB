@@ -2,7 +2,7 @@
 
 #include "table.h"
 
-Page* getPage(Database&, Table const&, rowcount_t row, pagesize_t& pageOffset);
+//Page* getPage(Database&, Table const&, rowcount_t row, pagesize_t& pageOffset);
 
 // Does not check if such columns exist
 void selectAll(Database&, std::ostream&, Table const&,
@@ -18,5 +18,12 @@ inline void createTable(Database&, std::string const&, std::vector<InputColumn> 
 
 // Doesn't check if such columns exist or if it typechecks
 void insertInto(Database&, Table&, std::map<std::string, std::string> const&);
+
+void updateWhere(Database&, Table&,
+      std::map<std::string, std::vector<Predicate>> const&,
+      std::map<std::string, std::string> const&);
+
+void deleteWhere(Database&, Table&,
+      std::map<std::string, std::vector<Predicate>> const&);
 
 #include "cmdlist_impl.h"

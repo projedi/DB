@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 #include "cmdlist.h"
 
@@ -50,24 +51,28 @@ void testDB(Database& db) {
    selectAll(db, cout, *res);
 }
 
-void fillDB(Database& db) {
+void insertToDB(Database& db) {
    auto res = Table::findTable(db, "table1");
-   if(res) { cout << "No refill" << endl; return; }
-   pair<string,SqlType*> cols[] =
-      { make_pair("col1", new IntType()), make_pair("col2", new VarcharType(10)) };
-   Table t1(db, "table1", vector<pair<string,SqlType*>>(cols, cols + 2));
    map<string, string> vals;
    for(int j = 0; j != 100000; ++j) {
-      for(int i = 0; i != 20; ++i) {
+      for(int i = 0; i != 12; ++i) {
          stringstream str;
          str << i;
          //cout << "putting " << str.str() << endl;
          vals["col1"] = str.str();
          if(i % 3) vals["col2"] = "def";
          else vals["col2"] = "abc";
-         insertInto(db, t1, vals);
+         insertInto(db, *res, vals);
       }
    }
+}
+
+void createDB(Database& db) {
+   auto res = Table::findTable(db, "table1");
+   if(res) { cout << "No create" << endl; return; }
+   pair<string,SqlType*> cols[] =
+      { make_pair("col1", new IntType()), make_pair("col2", new VarcharType(10)) };
+   Table t1(db, "table1", vector<pair<string,SqlType*>>(cols, cols + 2));
 }
 
 void testWhere(Database& db) {
@@ -85,12 +90,62 @@ void testWhere(Database& db) {
    selectAll(db, cout, *res);
 }
 
+void testDelete(Database& db) {
+   int val1 = 10;
+   int val2 = 3;
+   string val3 = "abc";
+   map<string,vector<Predicate>> constrs;
+   auto& col1 = constrs["col1"];
+   col1.push_back(Predicate(Predicate::LT, (uint8_t*)&val1));
+   col1.push_back(Predicate(Predicate::GEQ, (uint8_t*)&val2));
+   auto& col2 = constrs["col2"];
+   col2.push_back(Predicate(Predicate::EQ, (uint8_t*)val3.c_str()));
+   auto res = Table::findTable(db, "table1");
+   deleteWhere(db, *res, constrs);
+}
+
+void testUpdate(Database& db) {
+   int val1 = 10;
+   int val2 = 3;
+   string val3 = "abc";
+   map<string,vector<Predicate>> constrs;
+   auto& col1 = constrs["col1"];
+   col1.push_back(Predicate(Predicate::LT, (uint8_t*)&val1));
+   col1.push_back(Predicate(Predicate::GEQ, (uint8_t*)&val2));
+   auto& col2 = constrs["col2"];
+   col2.push_back(Predicate(Predicate::EQ, (uint8_t*)val3.c_str()));
+   map<string, string> vals;
+   vals["col2"] = "ae";
+   auto res = Table::findTable(db, "table1");
+   updateWhere(db, *res, constrs, vals);
+}
+
+void benchmark(string tag = "") {
+   using namespace std::chrono;
+   static high_resolution_clock::time_point t1 = high_resolution_clock::now();
+   static high_resolution_clock::time_point t2 = t1;
+   if(tag.empty()) return;
+   high_resolution_clock::time_point t3 = high_resolution_clock::now();
+   duration<double> dt1 = duration_cast<duration<double>>(t3 - t2);
+   duration<double> dt2 = duration_cast<duration<double>>(t3 - t1);
+   cerr << tag << ": delta = " << dt1.count() << "; total = " << dt2.count() << endl;
+   t2 = t3;
+}
+
 int main() {
    Metadata meta = { "test", 3, 5, 4096 };
    Database db(meta, true);
-   //testPages(db);
-   //testMeta(db);
-   //testDB(db);
-   fillDB(db);
+   benchmark();
+   createDB(db);
+   benchmark("Create");
+   insertToDB(db);
+   benchmark("Insert");
+   testDelete(db);
+   benchmark("Delete");
+   insertToDB(db);
+   benchmark("Insert");
+   testUpdate(db);
+   benchmark("Update");
    testWhere(db);
+   benchmark("Print");
 }

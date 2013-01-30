@@ -9,7 +9,7 @@ LDFLAGS =
 #LDFLAGS = -pg
 BUILDDIR = build
 
-sources = database.cpp types.cpp page.cpp file.cpp insert.cpp select.cpp main.cpp
+sources = database.cpp types.cpp page.cpp file.cpp cmdlist.cpp main.cpp
 objects = ${sources:%.cpp=$(BUILDDIR)/%.o}
 depends = ${sources:%.cpp=$(BUILDDIR)/%.d}
 
