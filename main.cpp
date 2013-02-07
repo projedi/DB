@@ -113,7 +113,7 @@ void testCreateIndex(Database const* db) {
    auto res = Table::findTable(db, "table1");
    auto col = res->findColumn("col2");
    vector<pair<Column,Index::Direction>> cols(1,make_pair(*col,Index::ASC));
-   //createIndex(db, *res, Index::Hash, false, cols);
+   createIndex(db, *res, Index::Hash, false, cols);
 }
 
 void benchmark(string tag = "") {
@@ -138,6 +138,7 @@ int main() {
    benchmark("Create index");
    insertToDB(&db);
    benchmark("Insert");
+   /*
    testDelete(&db);
    benchmark("Delete");
    insertToDB(&db);
@@ -146,4 +147,6 @@ int main() {
    benchmark("Update");
    testWhere(&db);
    benchmark("Print");
+   */
+   // TODO: When adding index, add all rows in there
 }

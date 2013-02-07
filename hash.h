@@ -13,4 +13,5 @@ struct Hash: Index {
    rowiterator rowIterator(std::map<Column, std::vector<Predicate>> const&) const;
 private:
    pagesize_t m_recordSize;
+   pagesize_t m_hashSize;
 };

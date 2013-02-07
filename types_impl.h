@@ -121,6 +121,7 @@ uint32_t VarcharType::hash(void* val, pagesize_t size) const {
    char* c = (char*)val;
    std::hash<char> hasher;
    size_t res = hasher(*c);
+   ++c;
    for(;*c;++c) res ^= hasher(*c);
    return res % size;
 }
