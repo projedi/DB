@@ -34,11 +34,11 @@ void selectWhere(Database const*, std::ostream&, Table const&, Constraints const
 // TODO: Check if requested table exists and do the only sensible thing(except exit(1)).
 inline void createTable(Database const*, std::string const&, std::vector<InputColumn> const&);
 
-void insertInto(Database const*, Table&, Values const&);
+bool insertInto(Database const*, Table&, Values const&);
 
-void updateWhere(Database const*, Table&, Constraints const&, Values const&);
+rowcount_t updateWhere(Database const*, Table&, Constraints const&, Values const&);
 
-void deleteWhere(Database const*, Table&, Constraints const&);
+rowcount_t deleteWhere(Database const*, Table&, Constraints const&);
 
 void createIndex(Database const*, Table&, Index::Type, bool, IndexColumns const&);
 

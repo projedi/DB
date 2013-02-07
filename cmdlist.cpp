@@ -151,7 +151,7 @@ bool optimizeConstraints(Constraints& constrs) {
             }
             if(highBound) {
                int res = type.compare(pred->val, highBound);
-               if(res == -1 || (!res && highStrict)) return false;
+               if(res == 1 || (!res && highStrict)) return false;
             }
          } else if(pred->op == Predicate::GT) {
             if(lowBound) {
@@ -198,9 +198,12 @@ bool optimizeConstraints(Constraints& constrs) {
 
 // TODO: Really check this shit on dummy(metadata only) implementations of hash and btree.
 std::shared_ptr<Index const> findIndex(Database const* db, Table const& table,
-      Constraints& constrs, Constraints& usedConstraints) {
-   // TODO: Do proper error handling. This makes clients to fall back to fullscan.
-   if(!optimizeConstraints(constrs)) return std::shared_ptr<Index>();
+      Constraints& constrs, Constraints& usedConstraints, bool& contradiction) {
+   contradiction = false;
+   if(!optimizeConstraints(constrs)) {
+      contradiction = true;
+      return std::shared_ptr<Index const>();
+   }
    auto indexes = table.indexes(); 
    int best = -1;
    bool isEquality = false;
@@ -247,11 +250,17 @@ std::shared_ptr<Index const> findIndex(Database const* db, Table const& table,
 
 void selectWhere(Database const* db, ostream& ost, Table const& table, Constraints const& constrs,
       Columns cols) {
-   if(cols.empty()) cols = table.cols();
-   printHeader(ost, table, cols);
    Constraints usedConstrs;
    Constraints constraints(constrs);
-   auto index = findIndex(db, table, constraints, usedConstrs);
+   bool contr;
+   auto index = findIndex(db, table, constraints, usedConstrs, contr);
+   if(contr) {
+      std::cerr << "Constraints set is contradictive" << endl;
+      return;
+   }
+   if(cols.empty()) cols = table.cols();
+   printHeader(ost, table, cols);
+   if(index) std::cerr << "Select uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
    for(; rowIt; ++rowIt) {
       rowcount_t row = *rowIt;
@@ -263,7 +272,7 @@ void selectWhere(Database const* db, ostream& ost, Table const& table, Constrain
 }
 
 // TODO: Has high self time. Investigate further. It's possibly already gone.
-void insertInto(Database const* db, Table& table, Values const& vals) {
+bool insertInto(Database const* db, Table& table, Values const& vals) {
    rowcount_t rowNum = table.rowCount();
    table.rowCount() += 1;
    pagesize_t pageOffset;
@@ -275,18 +284,27 @@ void insertInto(Database const* db, Table& table, Values const& vals) {
    }
    auto indexes = table.indexes();
    for(auto index = indexes.begin(); index != indexes.end(); ++index)
-      (*index)->insert(rowNum, vals);
+      if(!(*index)->insert(rowNum, vals)) return false;
+   return true;
 }
 
-void updateWhere(Database const* db, Table& table, Constraints const& constrs,
+rowcount_t updateWhere(Database const* db, Table& table, Constraints const& constrs,
       Values const& vals) {
    Constraints usedConstrs; 
    Constraints constraints(constrs);
-   auto index = findIndex(db, table, constraints, usedConstrs);
+   bool contr;
+   auto index = findIndex(db, table, constraints, usedConstrs, contr);
+   if(contr) {
+      std::cerr << "Constraints set is contradictive" << endl;
+      return 0;
+   }
+   if(index) std::cerr << "Update uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
+   rowcount_t rowCount = 0;
    for(; rowIt; ++rowIt) {
       rowcount_t row = *rowIt;
       if(checkRow(db, table, row, constrs)) {
+         ++rowCount;
          pagesize_t pageOffset;
          unique_ptr<Page> page(getPage(db, table, row, pageOffset));
          std::map<Column, void*> rowVals;
@@ -309,16 +327,25 @@ void updateWhere(Database const* db, Table& table, Constraints const& constrs,
          }
       }
    }
+   return rowCount;
 }
 
-void deleteWhere(Database const* db, Table& table, Constraints const& constrs) {
+rowcount_t deleteWhere(Database const* db, Table& table, Constraints const& constrs) {
    Constraints usedConstrs; 
    Constraints constraints(constrs);
-   auto index = findIndex(db, table, constraints, usedConstrs);
+   bool contr;
+   auto index = findIndex(db, table, constraints, usedConstrs, contr);
+   if(contr) {
+      std::cerr << "Constraints set is contradictive" << endl;
+      return 0;
+   }
+   rowcount_t rowCount = 0;
+   if(index) std::cerr << "Delete uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
    for(; rowIt; ++rowIt) {
       rowcount_t row = *rowIt;
       if(checkRow(db, table, row, constrs)) {
+         ++rowCount;
          pagesize_t pageOffset;
          unique_ptr<Page> page(getPage(db, table, row, pageOffset));
          page->at<uint8_t>(pageOffset, Table::DEL_FLAG);
@@ -327,6 +354,7 @@ void deleteWhere(Database const* db, Table& table, Constraints const& constrs) {
             (*index)->remove(rowIt);
       }
    }
+   return rowCount;
 }
 
 void createIndex(Database const* db, Table& table, Index::Type type, bool isUnique, IndexColumns const& cols) {

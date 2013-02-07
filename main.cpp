@@ -38,8 +38,8 @@ void insertToDB(Database const* db) {
    auto col1 = res->findColumn("col1");
    auto col2 = res->findColumn("col2");
    map<Column, void*> vals;
-   for(int j = 0; j != 100000; ++j) {
-   //for(int j = 0; j != 10; ++j) {
+   //for(int j = 0; j != 100000; ++j) {
+   for(int j = 0; j != 10; ++j) {
       for(int i = 0; i != 12; ++i) {
          vals[*col1] = &i;
          string val;
@@ -111,9 +111,9 @@ void testUpdate(Database const* db) {
 
 void testCreateIndex(Database const* db) {
    auto res = Table::findTable(db, "table1");
-   auto tcol1 = res->findColumn("col1");
-   vector<pair<Column,Index::Direction>> cols(1,make_pair(*tcol1,Index::ASC));
-   createIndex(db, *res, Index::Hash, false, cols);
+   auto col = res->findColumn("col2");
+   vector<pair<Column,Index::Direction>> cols(1,make_pair(*col,Index::ASC));
+   //createIndex(db, *res, Index::Hash, false, cols);
 }
 
 void benchmark(string tag = "") {
