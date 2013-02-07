@@ -28,11 +28,25 @@ typeid_t IntType::id() const { return 1; }
 void IntType::write(void* val, Page& page, pagesize_t& offset) const {
    page.at<int32_t>(offset, *((int32_t*)val));
 }
+void* IntType::read(Page const& page, pagesize_t& offset) const { 
+   return new int32_t(page.at<int32_t>(offset));
+}
+void IntType::clear(void* p) const { delete (int32_t*)p; }
 void IntType::toString(std::ostream& ost, Page const& page, pagesize_t& offset) const {
    ost << page.at<int32_t>(offset); 
 }
-bool IntType::satisfies(std::vector<Predicate> const& pred, Page const& page, pagesize_t off) const {
+bool IntType::satisfies(std::vector<Predicate> const& pred, Page const& page, pagesize_t& off) const {
    return satisfiesPage<int32_t>(pred, page, off);
+}
+uint32_t IntType::hash(void* val, pagesize_t size) const {
+   return std::hash<int32_t>()(*((int32_t*)val)) % size;
+}
+int IntType::compare(void* lhs, void* rhs) const {
+   int32_t lval = *(int32_t*)lhs;
+   int32_t rval = *(int32_t*)rhs;
+   if(lval < rval) return -1;
+   if(lval == rval) return 0;
+   return 1;
 }
 
 typesize_t DoubleType::size() const { return sizeof(double); }
@@ -40,11 +54,25 @@ typeid_t DoubleType::id() const { return 2; }
 void DoubleType::write(void* val, Page& page, pagesize_t& offset) const {
    page.at<double>(offset, *((double*)val));
 }
+void* DoubleType::read(Page const& page, pagesize_t& offset) const { 
+   return new double(page.at<double>(offset));
+}
+void DoubleType::clear(void* p) const { delete (double*)p; }
 void DoubleType::toString(std::ostream& ost, Page const& page, pagesize_t& offset) const {
    ost << page.at<double>(offset); 
 }
-bool DoubleType::satisfies(std::vector<Predicate> const& pred, Page const& page, pagesize_t off) const {
+bool DoubleType::satisfies(std::vector<Predicate> const& pred, Page const& page, pagesize_t& off) const {
    return satisfiesPage<double>(pred, page, off);
+}
+uint32_t DoubleType::hash(void* val, pagesize_t size) const {
+   return std::hash<double>()(*((double*)val)) % size;
+}
+int DoubleType::compare(void* lhs, void* rhs) const {
+   double lval = *(double*)lhs;
+   double rval = *(double*)rhs;
+   if(lval < rval) return -1;
+   if(lval == rval) return 0;
+   return 1;
 }
 
 VarcharType::VarcharType(typesize_t size): m_size(size) { }
@@ -58,7 +86,17 @@ void VarcharType::write(void* val, Page& page, pagesize_t& offset) const {
       else page.at<char>(offset, 0);
    }
 }
-bool VarcharType::satisfies(std::vector<Predicate> const& preds, Page const& page, pagesize_t off) const {
+void* VarcharType::read(Page const& page, pagesize_t& offset) const { 
+   char* res = new char[m_size + 1];
+   char* str = res;
+   for(typesize_t i = 0; i != m_size; ++i, ++str) {
+      *str = page.at<char>(offset);
+   }
+   *str = 0;
+   return res;
+}
+void VarcharType::clear(void* p) const { delete[] (char*)p; }
+bool VarcharType::satisfies(std::vector<Predicate> const& preds, Page const& page, pagesize_t& off) const {
    char* pval = new char[m_size + 1];
    std::unique_ptr<char> holder(pval);
    for(int i = 0; i != m_size; ++i, ++pval)
@@ -78,6 +116,16 @@ bool VarcharType::satisfies(std::vector<Predicate> const& preds, Page const& pag
       }
    }
    return true;
+}
+uint32_t VarcharType::hash(void* val, pagesize_t size) const {
+   char* c = (char*)val;
+   std::hash<char> hasher;
+   size_t res = hasher(*c);
+   for(;*c;++c) res ^= hasher(*c);
+   return res % size;
+}
+int VarcharType::compare(void* lhs, void* rhs) const {
+   return strcmp((char*)lhs, (char*)rhs);
 }
 
 SqlType* identifyType(typeid_t id) {

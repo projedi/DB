@@ -2,11 +2,10 @@
 
 #include "page.h"
 
-//const uint8_t EMPTY_BYTE = 0;
-const uint8_t EMPTY_BYTE = 0xe;
+const uint8_t EMPTY_BYTE = 0x0e;
 
 struct File: Cacheable<File> {
-   File(Database&, std::string const&);
+   File(Database const*, std::string const&);
    ~File();
    inline bool operator ==(File const&) const;
    inline bool operator <(File const&) const;
@@ -17,7 +16,7 @@ struct File: Cacheable<File> {
 private:
    void loadFile();
 private:
-   Database* m_db;
+   Database const* m_db;
    std::string m_name;
    std::shared_ptr<FILE*> m_file;
 };

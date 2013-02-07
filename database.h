@@ -16,8 +16,8 @@ struct Database {
    // Throws an exception if path is not a directory.
    Database(Metadata const&, bool overwrite = false);
    inline Metadata const& metadata() const;
-   inline Cache<File>& filesCache();
-   inline Cache<Page>& pagesCache();
+   inline Cache<File> const& filesCache() const;
+   inline Cache<Page> const& pagesCache() const;
 private:
    Database(Database const&);
    Database& operator =(Database const&);

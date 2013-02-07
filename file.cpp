@@ -3,7 +3,7 @@
 
 using std::string;
 
-File::File(Database& db, string const& name): m_db(&db), m_name(name) {
+File::File(Database const* db, string const& name): m_db(db), m_name(name) {
    auto res = m_db->filesCache().find(*this);
    if(res) m_file = res->m_file;
    else m_file.reset(new FILE*(nullptr));

@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void testPages(Database& db) {
+void testPages(Database const* db) {
    string name = "page";
    Page** p = new Page*[8];
    for(int i = 0; i != 8; ++i) p[i] = nullptr;
@@ -22,7 +22,7 @@ void testPages(Database& db) {
    delete [] p;
 }
 
-void testMeta(Database& db) {
+void testMeta(Database const* db) {
    auto res = Table::findTable(db, "table1");
    if(res) { cout << "Table found" << endl; return; }
    cout << "Table not found" << endl;
@@ -33,23 +33,25 @@ void testMeta(Database& db) {
    if(res) cout << "Table found" << endl;
 }
 
-void insertToDB(Database& db) {
+void insertToDB(Database const* db) {
    auto res = Table::findTable(db, "table1");
-   map<string, void*> vals;
+   auto col1 = res->findColumn("col1");
+   auto col2 = res->findColumn("col2");
+   map<Column, void*> vals;
    for(int j = 0; j != 100000; ++j) {
    //for(int j = 0; j != 10; ++j) {
       for(int i = 0; i != 12; ++i) {
-         vals["col1"] = &i;
+         vals[*col1] = &i;
          string val;
          if(i % 3) val = "def";
          else val = "abc";
-         vals["col2"] = (void*)val.c_str();
+         vals[*col2] = (void*)val.c_str();
          insertInto(db, *res, vals);
       }
    }
 }
 
-void createDB(Database& db) {
+void createDB(Database const* db) {
    auto res = Table::findTable(db, "table1");
    if(res) { cout << "No create" << endl; return; }
    pair<string,SqlType*> cols[] =
@@ -57,7 +59,7 @@ void createDB(Database& db) {
    Table t1(db, "table1", vector<pair<string,SqlType*>>(cols, cols + 2));
 }
 
-void testWhere(Database& db) {
+void testWhere(Database const* db) {
    int val1 = 10;
    int val2 = 3;
    string val3 = "abc";
@@ -72,35 +74,46 @@ void testWhere(Database& db) {
    selectAll(db, cout, *res);
 }
 
-void testDelete(Database& db) {
+void testDelete(Database const* db) {
+   auto res = Table::findTable(db, "table1");
+   auto tcol1 = res->findColumn("col1");
+   auto tcol2 = res->findColumn("col2");
    int val1 = 10;
    int val2 = 3;
    string val3 = "abc";
-   map<string,vector<Predicate>> constrs;
-   auto& col1 = constrs["col1"];
+   map<Column,vector<Predicate>> constrs;
+   auto& col1 = constrs[*tcol1];
    col1.push_back(Predicate(Predicate::LT, &val1));
    col1.push_back(Predicate(Predicate::GEQ, &val2));
-   auto& col2 = constrs["col2"];
+   auto& col2 = constrs[*tcol2];
    col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
-   auto res = Table::findTable(db, "table1");
    deleteWhere(db, *res, constrs);
 }
 
-void testUpdate(Database& db) {
+void testUpdate(Database const* db) {
+   auto res = Table::findTable(db, "table1");
+   auto tcol1 = res->findColumn("col1");
+   auto tcol2 = res->findColumn("col2");
    int val1 = 10;
    int val2 = 3;
    string val3 = "abc";
-   map<string,vector<Predicate>> constrs;
-   auto& col1 = constrs["col1"];
+   map<Column,vector<Predicate>> constrs;
+   auto& col1 = constrs[*tcol1];
    col1.push_back(Predicate(Predicate::LT, &val1));
    col1.push_back(Predicate(Predicate::GEQ, &val2));
-   auto& col2 = constrs["col2"];
+   auto& col2 = constrs[*tcol2];
    col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
-   map<string, void*> vals;
+   map<Column, void*> vals;
    string val4 = "ae";
-   vals["col2"] = (void*)val4.c_str();
-   auto res = Table::findTable(db, "table1");
+   vals[*tcol2] = (void*)val4.c_str();
    updateWhere(db, *res, constrs, vals);
+}
+
+void testCreateIndex(Database const* db) {
+   auto res = Table::findTable(db, "table1");
+   auto tcol1 = res->findColumn("col1");
+   vector<pair<Column,Index::Direction>> cols(1,make_pair(*tcol1,Index::ASC));
+   createIndex(db, *res, Index::Hash, false, cols);
 }
 
 void benchmark(string tag = "") {
@@ -119,16 +132,18 @@ int main() {
    Metadata meta = { "test", 3, 5, 4096 };
    Database db(meta, true);
    benchmark();
-   createDB(db);
+   createDB(&db);
    benchmark("Create");
-   insertToDB(db);
+   testCreateIndex(&db);
+   benchmark("Create index");
+   insertToDB(&db);
    benchmark("Insert");
-   testDelete(db);
+   testDelete(&db);
    benchmark("Delete");
-   insertToDB(db);
+   insertToDB(&db);
    benchmark("Insert");
-   testUpdate(db);
+   testUpdate(&db);
    benchmark("Update");
-   testWhere(db);
+   testWhere(&db);
    benchmark("Print");
 }

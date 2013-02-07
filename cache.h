@@ -23,19 +23,20 @@ template<class T>
 struct Cache {
    // Cool, isn't? Emulating Haskell-like parametric polymorphism with constraints
    static_assert(std::is_base_of<Cacheable<T>, T>::value,
-         "T must be derived from Cacheable<T>");
+         "Cache<T>: T must be derived from Cacheable<T>");
    Cache(cachesize_t maxSize);
    ~Cache();
-   boost::optional<T> find(T const&);
-   void insert(T const&);
-   void remove(T const&);
+   boost::optional<T> find(T const&) const;
+   // Logically const is a bendable definition, you know.
+   void insert(T const&) const;
+   void remove(T const&) const;
 private:
    Cache(Cache<T> const&);
    Cache<T>& operator =(Cache<T> const&);
 private:
    cachesize_t m_maxSize;
-   std::map<T, typename std::list<T>::iterator> m_map;
-   std::list<T> m_list;
+   mutable std::map<T, typename std::list<T>::iterator> m_map;
+   mutable std::list<T> m_list;
 };
 
 #include "cache_impl.h"

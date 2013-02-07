@@ -9,6 +9,7 @@ bool Page::operator <(Page const& o) const {
 
 std::string const& Page::name() const { return m_name; }
 pagenumber_t Page::number() const { return m_number; }
+Database const* Page::db() const { return m_db; }
 
 template<class T>
 void Page::at(pagesize_t& offset, T const& val) {
@@ -24,7 +25,7 @@ void Page::at(pagesize_t& offset, T const& val) {
 
 template<class T>
 T Page::at(pagesize_t& offset) const {
-   uint8_t* data = buffer();
+   uint8_t const* data = buffer();
    if(!data) {
       loadPage();
       data = buffer();
@@ -54,7 +55,7 @@ inline void Page::at<std::string>(pagesize_t& offset, std::string const& val) {
 
 template<>
 inline std::string Page::at<std::string>(pagesize_t& offset) const {
-   uint8_t* data = buffer();
+   uint8_t const* data = buffer();
    if(!data) {
       loadPage();
       data = buffer();

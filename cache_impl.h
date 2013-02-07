@@ -17,7 +17,7 @@ Cache<T>::~Cache() {
 }
 
 template<class T>
-boost::optional<T> Cache<T>::find(T const& val) {
+boost::optional<T> Cache<T>::find(T const& val) const {
    auto mapIt = m_map.find(val);
    if(mapIt == m_map.end()) return boost::optional<T>();
    T res = mapIt->first;
@@ -29,14 +29,14 @@ boost::optional<T> Cache<T>::find(T const& val) {
 }
 
 template<class T>
-void Cache<T>::insert(T const& val) {
+void Cache<T>::insert(T const& val) const {
    if(m_list.size() == m_maxSize) remove(m_list.back());
    m_list.push_front(val);
    m_map.insert(make_pair(val, m_list.begin()));
 }
 
 template<class T>
-void Cache<T>::remove(T const& val) {
+void Cache<T>::remove(T const& val) const {
    auto mapIt = m_map.find(val);
    if(mapIt == m_map.end()) return;
    T res = mapIt->first;
