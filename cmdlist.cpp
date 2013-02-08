@@ -199,7 +199,8 @@ std::shared_ptr<Index const> findIndex(Database const* db, Table const& table,
          best = i;
          isEquality = currentConstraints.begin()->second.front().op == Predicate::EQ;
          usedConstraints = currentConstraints;
-      } else {
+      } else if(best == -1) continue;
+      else {
          auto bestIndex = indexes[best];
          if(index->type() == Index::Hash) {
             if(isEquality && !index->unique() && bestIndex->unique()) continue;
