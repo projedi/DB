@@ -1,9 +1,9 @@
 LIBS = -lboost_filesystem -lboost_system
-CPPFLAGS = -Wall -pedantic -std=c++11 -g
+#CPPFLAGS = -Wall -pedantic -std=c++11 -g
 #CPPFLAGS = -Wall -pedantic -std=c++11 -O2 -g -pg
-#CPPFLAGS = -Wall -pedantic -std=c++11 -O2
-#CXX = clang++
-CXX = g++
+CPPFLAGS = -Wall -pedantic -std=c++11 -O2
+CXX = clang++
+#CXX = g++
 LD = ${CXX}
 LDFLAGS = 
 #LDFLAGS = -pg

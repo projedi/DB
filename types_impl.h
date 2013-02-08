@@ -96,9 +96,12 @@ void* VarcharType::read(Page const& page, pagesize_t& offset) const {
    return res;
 }
 void VarcharType::clear(void* p) const { delete[] (char*)p; }
+struct DeleterVarchar {
+   void operator()(char* p) { delete [] p; }
+};
 bool VarcharType::satisfies(std::vector<Predicate> const& preds, Page const& page, pagesize_t& off) const {
    char* pval = new char[m_size + 1];
-   std::unique_ptr<char> holder(pval);
+   std::shared_ptr<char> holder(pval, DeleterVarchar());
    for(int i = 0; i != m_size; ++i, ++pval)
       *pval = page.at<char>(off);
    *pval = 0;

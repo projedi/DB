@@ -38,9 +38,9 @@ void insertToDB(Database const* db) {
    auto col1 = res->findColumn("col1");
    auto col2 = res->findColumn("col2");
    map<Column, void*> vals;
-   for(int i = 0; i != 2; ++i) {
-      //for(int j = 0; j != 100000; ++j) {
-      for(int j = 0; j != 100; ++j) {
+   for(int i = 0; i != 200; ++i) {
+      for(int j = 0; j != 100000; ++j) {
+      //for(int j = 0; j != 100; ++j) {
          vals[*col1] = &j;
          string val;
          if(j % 3) val = "def";
