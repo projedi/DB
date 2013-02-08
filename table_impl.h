@@ -60,6 +60,26 @@ void Table::addIndex(std::shared_ptr<Index const> index) { m_indexes.push_back(i
 
 std::vector<std::shared_ptr<Index const>> const& Table::indexes() const { return m_indexes; }
 
+Page* Table::getPage(rowcount_t row, pagesize_t& pageOffset) const {
+   Page* page;
+   // Let's not forget the dirty byte.
+   pagesize_t rowSize = 1 + m_rowSize;
+   pagesize_t pageSize = m_page.db()->metadata().pageSize;
+   rowcount_t rowsOnFirstPage = (pageSize - headerSize()) / rowSize;
+   rowcount_t rowsOnPage = pageSize / rowSize;
+   if(row < rowsOnFirstPage) {
+      page = new Page(m_page);
+      pageOffset = headerSize() + row * rowSize;
+   } else {
+      // It's like numbering pages from 1.
+      row -= rowsOnFirstPage;
+      pagenumber_t pageNum = row / rowsOnPage + 1;
+      page = new Page(m_page.db(), m_page.name(), pageNum);
+      pageOffset = (row - (pageNum - 1) * rowsOnPage) * rowSize;
+   }
+   return page;
+}
+
 boost::optional<Table> Table::findTable(Database const* db, std::string const& name) {
    std::fstream f(db->metadata().path + "/" + "table-" + name, std::fstream::in);
    if(f.is_open()) return boost::optional<Table>(Table(db, name));

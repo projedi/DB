@@ -1,9 +1,18 @@
-rowiterator::rowiterator(std::shared_ptr<Index const> owner, nextf next,
+rowiterator::rowiterator(Index const* owner, nextf next,
       std::pair<rowcount_t,pagesize_t> init):
-   m_row(init.first), m_offset(init.second), m_owner(owner), m_next(next), m_active(true) { }
+   m_row(init.first), m_offset(init.second), m_owner(owner), m_next(next), m_active(true), m_oneshot(false) { }
+
+rowiterator::rowiterator(Index const* owner): m_owner(owner), m_active(false), m_oneshot(false) { }
+
+rowiterator::rowiterator(Index const* owner, std::pair<rowcount_t,pagesize_t> init):
+   m_row(init.first), m_offset(init.second), m_owner(owner), m_active(true), m_oneshot(true) { }
 
 rowiterator& rowiterator::operator ++() {
    if(!m_active) return *this;
+   if(m_oneshot) {
+      m_active = false;
+      return *this;
+   }
    auto val = m_next(*this);    
    if(val) {
       m_row = val->first;
@@ -16,7 +25,7 @@ rowiterator::operator bool() const { return m_active; }
 rowcount_t rowiterator::operator *() const { return m_row; }
 rowcount_t rowiterator::row() const { return m_row; }
 pagesize_t rowiterator::offset() const { return m_offset; }
-std::shared_ptr<Index const> rowiterator::owner() const { return m_owner; }
+Index const* rowiterator::owner() const { return m_owner; }
 bool rowiterator::active() const { return m_active; }
 
 Index::~Index() { }

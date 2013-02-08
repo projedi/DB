@@ -7,20 +7,25 @@ struct Index;
 struct rowiterator {
    typedef std::function<boost::optional<std::pair<rowcount_t,pagesize_t>> (rowiterator const&)> nextf;
    //typedef boost::optional<std::pair<rowcount_t,pagesize_t>> (*nextf) (rowiterator const&);
-   inline rowiterator(std::shared_ptr<Index const>, nextf, std::pair<rowcount_t,pagesize_t>);
+   inline rowiterator(Index const*, nextf, std::pair<rowcount_t,pagesize_t>);
+   // empty iterator
+   inline rowiterator(Index const*);
+   // one-shot iterator
+   inline rowiterator(Index const*, std::pair<rowcount_t,pagesize_t>);
    inline rowiterator& operator ++();
    inline operator bool() const;
    inline rowcount_t operator *() const;
    inline rowcount_t row() const;
    inline pagesize_t offset() const;
-   inline std::shared_ptr<Index const> owner() const;
+   inline Index const* owner() const;
    inline bool active() const;
 private:
    rowcount_t m_row;
    pagesize_t m_offset;
-   std::shared_ptr<Index const> m_owner;
+   Index const* m_owner;
    nextf m_next;
    bool m_active;
+   bool m_oneshot;
 };
 
 struct Column;
@@ -37,7 +42,7 @@ struct Index {
    void saveHeader() const;
    void loadHeader();
    // const logic is like this: header didn't change - nothing changed
-   virtual bool remove(rowiterator const&) const = 0;
+   virtual bool remove(Table const&, rowiterator const&) const = 0;
    virtual bool insert(rowcount_t, std::map<Column, void*> const& vals) const = 0;
    virtual rowiterator rowIterator(
       std::map<Column, std::vector<Predicate>> const&) const = 0;

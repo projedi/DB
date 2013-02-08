@@ -15,23 +15,7 @@ void printHeader(ostream& ost, Table const& table, vector<Column> const& cols) {
 }
 
 Page* getPage(Database const* db, Table const& table, rowcount_t row, pagesize_t& pageOffset) {
-   Page* page;
-   // Let's not forget the dirty byte.
-   pagesize_t rowSize = 1 + table.rowSize();
-   pagesize_t pageSize = db->metadata().pageSize;
-   rowcount_t rowsOnFirstPage = (pageSize - table.headerSize()) / rowSize;
-   rowcount_t rowsOnPage = pageSize / rowSize;
-   if(row < rowsOnFirstPage) {
-      page = new Page(table.page());
-      pageOffset = table.headerSize() + row * rowSize;
-   } else {
-      // It's like numbering pages from 1.
-      row -= rowsOnFirstPage;
-      pagenumber_t pageNum = row / rowsOnPage + 1;
-      page = new Page(db, table.page().name(), pageNum);
-      pageOffset = (row - (pageNum - 1) * rowsOnPage) * rowSize;
-   }
-   return page;
+   return table.getPage(row,pageOffset);
 }
 
 bool printRow(Database const* db, ostream& ost, Table const& table, rowcount_t row,
@@ -199,6 +183,7 @@ bool optimizeConstraints(Constraints& constrs) {
 // TODO: Really check this shit on dummy(metadata only) implementations of hash and btree.
 std::shared_ptr<Index const> findIndex(Database const* db, Table const& table,
       Constraints& constrs, Constraints& usedConstraints, bool& contradiction) {
+   if(constrs.empty()) return std::shared_ptr<Index const>();
    contradiction = false;
    if(!optimizeConstraints(constrs)) {
       contradiction = true;
@@ -252,7 +237,7 @@ void selectWhere(Database const* db, ostream& ost, Table const& table, Constrain
       Columns cols) {
    Constraints usedConstrs;
    Constraints constraints(constrs);
-   bool contr;
+   bool contr = false;
    auto index = findIndex(db, table, constraints, usedConstrs, contr);
    if(contr) {
       std::cerr << "Constraints set is contradictive" << endl;
@@ -260,7 +245,7 @@ void selectWhere(Database const* db, ostream& ost, Table const& table, Constrain
    }
    if(cols.empty()) cols = table.cols();
    printHeader(ost, table, cols);
-   if(index) std::cerr << "Select uses index" << std::endl;
+   //if(index) std::cerr << "Select uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
    for(; rowIt; ++rowIt) {
       rowcount_t row = *rowIt;
@@ -298,7 +283,7 @@ rowcount_t updateWhere(Database const* db, Table& table, Constraints const& cons
       std::cerr << "Constraints set is contradictive" << endl;
       return 0;
    }
-   if(index) std::cerr << "Update uses index" << std::endl;
+   //if(index) std::cerr << "Update uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
    rowcount_t rowCount = 0;
    for(; rowIt; ++rowIt) {
@@ -319,7 +304,7 @@ rowcount_t updateWhere(Database const* db, Table& table, Constraints const& cons
          }
          auto indexes = table.indexes();
          for(auto index = indexes.begin(); index != indexes.end(); ++index) {
-            (*index)->remove(rowIt);
+            (*index)->remove(table, rowIt);
             (*index)->insert(rowIt.row(), rowVals);
          }
          for(auto it = rowVals.begin(); it != rowVals.end(); ++it) {
@@ -340,7 +325,7 @@ rowcount_t deleteWhere(Database const* db, Table& table, Constraints const& cons
       return 0;
    }
    rowcount_t rowCount = 0;
-   if(index) std::cerr << "Delete uses index" << std::endl;
+   //if(index) std::cerr << "Delete uses index" << std::endl;
    rowiterator rowIt = index ? index->rowIterator(usedConstrs) : table.rowIterator();
    for(; rowIt; ++rowIt) {
       rowcount_t row = *rowIt;
@@ -351,7 +336,7 @@ rowcount_t deleteWhere(Database const* db, Table& table, Constraints const& cons
          page->at<uint8_t>(pageOffset, Table::DEL_FLAG);
          auto indexes = table.indexes();
          for(auto index = indexes.begin(); index != indexes.end(); ++index)
-            (*index)->remove(rowIt);
+            (*index)->remove(table, rowIt);
       }
    }
    return rowCount;
@@ -360,4 +345,18 @@ rowcount_t deleteWhere(Database const* db, Table& table, Constraints const& cons
 void createIndex(Database const* db, Table& table, Index::Type type, bool isUnique, IndexColumns const& cols) {
    auto index = Index::createIndex(db, table, type, isUnique, cols); 
    table.addIndex(index);
+   auto rowIt = table.rowIterator();
+   for(; rowIt; ++rowIt) {
+      pagesize_t offset;
+      std::shared_ptr<Page> page(table.getPage(*rowIt, offset));
+      if(page->at<uint8_t>(offset) != 0xaa) continue;
+      std::map<Column, void*> vals;
+      for(auto it = table.cols().begin(); it != table.cols().end(); ++it) {
+         vals[*it] = it->type().read(*page, offset); 
+      }
+      index->insert(*rowIt, vals);
+      for(auto it = vals.begin(); it != vals.end(); ++it) {
+         it->first.type().clear(it->second);
+      }
+   }
 }

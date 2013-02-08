@@ -39,7 +39,7 @@ void insertToDB(Database const* db) {
    auto col2 = res->findColumn("col2");
    map<Column, void*> vals;
    //for(int j = 0; j != 100000; ++j) {
-   for(int j = 0; j != 10; ++j) {
+   for(int j = 0; j != 2; ++j) {
       for(int i = 0; i != 12; ++i) {
          vals[*col1] = &i;
          string val;
@@ -60,18 +60,14 @@ void createDB(Database const* db) {
 }
 
 void testWhere(Database const* db) {
-   int val1 = 10;
-   int val2 = 3;
-   string val3 = "abc";
-   map<string,vector<Predicate>> constrs;
-   auto& col1 = constrs["col1"];
-   col1.push_back(Predicate(Predicate::LT, &val1));
-   col1.push_back(Predicate(Predicate::GEQ, &val2));
-   auto& col2 = constrs["col2"];
-   col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
    auto res = Table::findTable(db, "table1");
-   //selectWhere(db, cout, *res, constrs);
-   selectAll(db, cout, *res);
+   auto tcol2 = res->findColumn("col2");
+   string val3 = "ae";
+   map<Column,vector<Predicate>> constrs;
+   auto& col2 = constrs[*tcol2];
+   col2.push_back(Predicate(Predicate::EQ, val3.c_str()));
+   selectWhere(db, cout, *res, constrs);
+   //selectAll(db, cout, *res);
 }
 
 void testDelete(Database const* db) {
@@ -138,7 +134,6 @@ int main() {
    benchmark("Create index");
    insertToDB(&db);
    benchmark("Insert");
-   /*
    testDelete(&db);
    benchmark("Delete");
    insertToDB(&db);
@@ -147,6 +142,5 @@ int main() {
    benchmark("Update");
    testWhere(&db);
    benchmark("Print");
-   */
    // TODO: When adding index, add all rows in there
 }

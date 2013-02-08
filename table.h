@@ -48,6 +48,7 @@ struct Table {
    inline void addIndex(std::shared_ptr<Index const>);
    inline std::vector<std::shared_ptr<Index const>> const& indexes() const;
    rowiterator rowIterator() const;
+   inline Page* getPage(rowcount_t, pagesize_t&) const;
    inline static boost::optional<Table> findTable(Database const*, std::string const&);
    static uint8_t const ADD_FLAG = 0xaa;
    static uint8_t const DEL_FLAG = 0xee;
